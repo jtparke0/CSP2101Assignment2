@@ -1,0 +1,144 @@
+#!/bin/bash
+#Joseph Parker
+#10496326
+
+curl -s "https://www.ecu.edu.au/service-centres/MACSC/gallery/gallery.php?folder=152" > temp.txt
+cat temp.txt | grep -Eo '(http|https)://[^"]+' | grep ".jpg" > imagelist.txt
+#Captures all the JPG links and puts it into a file
+
+
+while true; do
+
+    read -p 'Enter 1 for specific image, 2 for all images, 3 for a range of images, 4 for random images, and 5 to exit: ' selection
+
+    if [ $selection = 1 ]; then
+
+        while true; do
+
+            read -p "Enter a specific image number: " imagenum
+
+            if grep -q "$imagenum" imagelist.txt && [ "${#imagenum}" = 4 ]; then
+            #Check if the value can be found in the imagelist.txt file AND the user entered four characters
+                imagetodl=$(grep "$imagenum" imagelist.txt)
+                #store retrieved url from image number
+                #echo "$imagetodl"
+
+                curl -i -s "$imagetodl" > imagelength.txt
+                lengthline=$(grep -a "Length: ....." imagelength.txt)
+                echo "$lengthline" > imagelength.txt
+                fsize=$(sed -e 's/Content-Length: //; s/\r//' imagelength.txt)
+                kbsize=$(echo "scale=2 ; $fsize / 1024" | bc)
+                echo "Downloading DSC0$imagenum, with the file name DSC0$imagenum.jpg, with a file size of $kbsize KB ... File Download Complete!"
+                echo "PROGRAM FINISHED"
+               
+                
+                
+                wget -P images -q "$imagetodl"
+
+                break
+
+            else
+                echo "There was an error finding the specified image, please try again!"
+    
+            fi
+
+        done
+
+    fi
+
+
+    if [ $selection = 2 ]; then
+
+        while read line; do
+        selectedimg=$(sed -e 's%https://secure.ecu.edu.au/service-centres/MACSC/gallery/152/%%; s/.jpg//; s/\n//' <<< $line)
+        #selectedimg=$(egrep -o DSC0[0-9]{4} <<< $line)
+            
+        curl -i -s "$line" > imagelength.txt
+        lengthline=$(grep -a "Length: ....." imagelength.txt)
+        echo "$lengthline" > imagelength.txt
+        fsize=$(sed -e 's/Content-Length: //; s/\r//' imagelength.txt)
+        kbsize=$(echo "scale=2 ; $fsize / 1024" | bc)
+        echo "Downloading $selectedimg with the file name $selectedimg.jpg with a file size of $kbsize KB ... File Download Complete!"
+
+        done < imagelist.txt
+
+        wget -P images -q -i imagelist.txt
+        echo "PROGRAM FINISHED"
+
+    fi
+
+
+    if [ $selection = 3 ]; then
+
+        read -p "Enter the minimum number for the range : " lowerrange
+
+        read -p "Enter the maximum number for the range : " upperrange
+
+        for  (( c=$lowerrange; c<=$upperrange; c++ ))
+        do
+            grep "$c" imagelist.txt > rangeimage.txt
+            
+            if grep -q "$c" rangeimage.txt; then
+            #Tests if the image in the range actually exists before proceeding
+                imageselected=$(grep "$c" rangeimage.txt)
+
+                curl -i -s "$imageselected" > imagelength.txt
+                lengthline=$(grep -a "Length: ....." imagelength.txt)
+                echo "$lengthline" > imagelength.txt
+                fsize=$(sed -e 's/Content-Length: //; s/\r//' imagelength.txt)
+                kbsize=$(echo "scale=2 ; $fsize / 1024" | bc)
+                echo "Downloading DSC0$c, with the file name DSC0$c.jpg, with a file size of $kbsize KB ... File Download Complete!"
+
+                wget -P images -q -i rangeimage.txt
+                
+
+            fi
+            
+        done
+        echo "PROGRAM FINISHED"
+
+
+            
+    fi
+
+
+    if [ $selection = 4 ]; then
+        read -p "Enter how many images you would like to download: " randomnum
+        shuf -n $randomnum imagelist.txt > randomurls.txt
+
+        while read line; do
+            selectedimg=$(sed -e 's%https://secure.ecu.edu.au/service-centres/MACSC/gallery/152/%%; s/.jpg//; s/\n//' <<< $line)
+            #selectedimg=$(egrep -o DSC0[0-9]{4} <<< $line)
+            
+            curl -i -s "$line" > imagelength.txt
+            lengthline=$(grep -a "Length: ....." imagelength.txt)
+            echo "$lengthline" > imagelength.txt
+            fsize=$(sed -e 's/Content-Length: //; s/\r//' imagelength.txt)
+            kbsize=$(echo "scale=2 ; $fsize / 1024" | bc)
+            echo "Downloading $selectedimg with the file name $selectedimg.jpg with a file size of $kbsize KB ... File Download Complete!"
+
+        done < randomurls.txt
+
+        wget -P images -q -i randomurls.txt
+        echo "PROGRAM FINISHED"
+
+    fi
+
+
+    if [ $selection = 5 ]; then
+        echo 'Thank you for using the program!'
+        break
+    fi
+
+
+
+
+
+
+
+
+
+
+
+done
+exit 0
